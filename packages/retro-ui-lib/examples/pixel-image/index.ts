@@ -405,7 +405,7 @@ async function processSelectedArea() {
                 await processCanvas(
                     imageData,
                     config.buffer,
-                    config.canvas.getContext('2d')!,
+                    config.canvas.getContext('2d', { willReadFrequently: true })!,
                     palette,
                     isGrayscale,
                     config.overlay
@@ -551,7 +551,7 @@ function render() {
             const palette = index % 3 === 0 ? PALETTE_16BIT :
                            index % 3 === 1 ? PALETTE_256 :
                            DOS_PALETTE;
-            renderBuffer(config.buffer, config.canvas.getContext('2d')!, palette);
+            renderBuffer(config.buffer, config.canvas.getContext('2d', { willReadFrequently: true })!, palette);
         }
     });
 }
@@ -1001,22 +1001,37 @@ gifSaveBtn.addEventListener('click', () => {
 // Save dialog event handlers
 document.querySelector('.save-ok')?.addEventListener('click', async () => {
     const saveDialog = document.querySelector('.save-dialog') as HTMLElement;
+    const saveFormatSelect = document.getElementById('saveFormat') as HTMLSelectElement;
     const filename = (document.getElementById('saveFilename') as HTMLInputElement).value;
+    const format = saveFormatSelect.value.toUpperCase();
     
-    if (generatedFrames.length === 0) {
-        // Generate frames if not already generated
-        const startSize = parseInt(gifStartSizeInput.value);
-        const endSize = parseInt(gifEndSizeInput.value);
-        const frameCount = parseInt(gifFrameCountInput.value);
-        const delay = parseInt(gifDelayInput.value);
-        const type = gifAnimationTypeSelect.value;
+    // Handle GIF animation save
+    if ((saveDialog as any).saveData === undefined) {
+        if (generatedFrames.length === 0) {
+            // Generate frames if not already generated
+            const startSize = parseInt(gifStartSizeInput.value);
+            const endSize = parseInt(gifEndSizeInput.value);
+            const frameCount = parseInt(gifFrameCountInput.value);
+            const delay = parseInt(gifDelayInput.value);
+            const type = gifAnimationTypeSelect.value;
 
-        generatedFrames = await generateGifFrames(startSize, endSize, frameCount);
-        createGif(generatedFrames, delay, type, filename);
+            generatedFrames = await generateGifFrames(startSize, endSize, frameCount);
+            createGif(generatedFrames, delay, type, filename);
+        } else {
+            const delay = parseInt(gifDelayInput.value);
+            const type = gifAnimationTypeSelect.value;
+            createGif(generatedFrames, delay, type, filename);
+        }
     } else {
-        const delay = parseInt(gifDelayInput.value);
-        const type = gifAnimationTypeSelect.value;
-        createGif(generatedFrames, delay, type, filename);
+        // Handle PNG/JPG save
+        const { canvas } = (saveDialog as any).saveData;
+        const link = document.createElement('a');
+        link.download = `${filename}.${format.toLowerCase()}`;
+        // For JPG/JPEG consistency
+        const mimeFormat = format === 'JPG' ? 'jpeg' : format.toLowerCase();
+        link.href = canvas.toDataURL(`image/${mimeFormat}`);
+        link.click();
+        (saveDialog as any).saveData = undefined;
     }
     
     saveDialog.style.display = 'none';
@@ -1048,8 +1063,25 @@ const updatePreview = () => {
     input.addEventListener('change', updatePreview);
 });
 
-// Add event listeners for Set GIF buttons
+// Function to save canvas as image
+function saveCanvasAsImage(canvas: HTMLCanvasElement, format: string) {
+    const saveDialog = document.querySelector('.save-dialog') as HTMLElement;
+    const saveFormatSelect = document.getElementById('saveFormat') as HTMLSelectElement;
+    const saveFilenameInput = document.getElementById('saveFilename') as HTMLInputElement;
+    
+    // Store canvas for use in save handler
+    (saveDialog as any).saveData = { canvas };
+    
+    // Set format in select (handle JPG/JPEG consistency)
+    saveFormatSelect.value = format === 'JPEG' ? 'jpg' : format.toLowerCase();
+    saveFormatSelect.disabled = false; // Allow format switching between PNG/JPG
+    saveFilenameInput.value = 'pixel-image';
+    saveDialog.style.display = 'flex';
+}
+
+// Add event listeners for Set GIF buttons and save buttons
 document.querySelectorAll('.action-overlay').forEach(overlay => {
+    // Set GIF button handler
     const setGifBtn = overlay.querySelector('.set-gif');
     if (setGifBtn) {
         setGifBtn.addEventListener('click', () => {
@@ -1062,6 +1094,23 @@ document.querySelectorAll('.action-overlay').forEach(overlay => {
                 updatePreview();
             }
         });
+    }
+
+    // Save PNG/JPG button handlers
+    const pngBtn = overlay.querySelector('.png');
+    const jpgBtn = overlay.querySelector('.jpg');
+    const container = overlay.closest('.screen-container');
+    
+    if (container) {
+        const canvas = container.querySelector('canvas');
+        if (canvas) {
+            if (pngBtn) {
+                pngBtn.addEventListener('click', () => saveCanvasAsImage(canvas, 'PNG'));
+            }
+            if (jpgBtn) {
+                jpgBtn.addEventListener('click', () => saveCanvasAsImage(canvas, 'JPEG'));
+            }
+        }
     }
 });
 
