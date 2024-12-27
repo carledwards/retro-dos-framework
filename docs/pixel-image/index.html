@@ -47,35 +47,46 @@
             transition: opacity 0.2s;
             pointer-events: none;
             display: grid;
-            grid-template-rows: 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
             background: rgba(0, 0, 0, 0.7);
+        }
+        .gif-preview .action-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .screen-container:hover .action-overlay {
             opacity: 1;
             pointer-events: auto;
         }
-        .action-overlay .copy {
+        .action-overlay .copy,
+        .action-overlay .save-gif,
+        .action-overlay .save > div,
+        .action-overlay .set-gif {
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+        }
+        .action-overlay .copy,
+        .action-overlay .save {
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .action-overlay .set-gif {
+            white-space: pre-line;
+            text-align: center;
         }
         .action-overlay .save {
             display: grid;
             grid-template-columns: 1fr 1fr;
         }
-        .action-overlay .save > div {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
         .action-overlay .save > div:first-child {
             border-right: 1px solid rgba(255, 255, 255, 0.3);
         }
+        .action-overlay .copy:hover,
+        .action-overlay .save-gif:hover,
         .action-overlay .save > div:hover,
-        .action-overlay .copy:hover {
+        .action-overlay .set-gif:hover {
             background: rgba(255, 255, 255, 0.1);
         }
         .rendering-overlay {
@@ -97,14 +108,28 @@
         .rendering-overlay.active {
             opacity: 1;
         }
-        .screens-section {
-            margin-bottom: 20px;
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            background: #d4d4d4;
         }
-        .screens-grid {
+        .screens-section {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-bottom: 20px;
+            background: #c0c0c0;
+            padding: 20px;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            height: fit-content;
         }
         .screen-wrapper {
             display: flex;
@@ -121,8 +146,8 @@
             display: block;
             image-rendering: pixelated;
             background: #000;
-            width: 256px;
-            height: 256px;
+            width: 192px;
+            height: 192px;
         }
         h1 {
             margin: 0 0 5px 0;
@@ -234,27 +259,31 @@
             justify-content: space-between;
             align-items: center;
         }
-        .gif-dialog {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
+        .gif-creator {
+            background: #c0c0c0;
+            padding: 20px;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            height: fit-content;
+            display: grid;
+            grid-template-columns: 192px 1fr;
+            gap: 20px;
+            align-items: flex-start;
+            width: 100%;
+            box-sizing: border-box;
         }
         .gif-preview {
-            margin-top: 20px;
-            text-align: center;
+            margin: 0;
+            padding: 0;
+            width: 192px;
+            height: 192px;
         }
         .gif-preview canvas {
-            border: 2px solid #808080;
-            background: #000;
-            width: 256px;
-            height: 256px;
+            display: block;
+            width: 100%;
+            height: 100%;
         }
         select {
             padding: 4px;
@@ -332,7 +361,7 @@
             gap: 10px;
         }
     </style>
-  <script type="module" crossorigin src="./assets/main-55d21b18.js"></script>
+  <script type="module" crossorigin src="./assets/main-04646ec8.js"></script>
 </head>
 <body>
     <div class="container">
@@ -359,25 +388,29 @@
             </div>
         </div>
         <div class="image-controls">
-            <div class="control-item">
-                <label>Grid Size:</label>
+            <div class="control-item" style="gap: 5px;">
+                <label>Pixelated image size:</label>
                 <input type="number" id="gridSize" value="128" min="16" max="256" step="16">
+                <div class="button grid-size-btn" data-size="256">256</div>
+                <div class="button grid-size-btn" data-size="128">128</div>
+                <div class="button grid-size-btn" data-size="64">64</div>
+                <div class="button grid-size-btn" data-size="32">32</div>
             </div>
-            <button class="button" id="gifBuilder">Create GIF</button>
         </div>
-        <div class="screens-section">
-            <div class="screens-grid">
+        <div class="main-content">
+            <div class="screens-section">
                 <div class="screen-wrapper">
                     <div class="screen-title">16-bit Color (65536 Colors)</div>
                     <div class="screen-container">
                         <canvas id="screenFull"></canvas>
                         <div class="rendering-overlay">Rendering...</div>
-                        <div class="action-overlay">
+                        <div class="action-overlay" data-palette="16bit" data-mode="color">
                             <div class="copy">Copy</div>
                             <div class="save">
                                 <div class="png">PNG</div>
                                 <div class="jpg">JPG</div>
                             </div>
+                            <div class="set-gif">set GIF</div>
                         </div>
                     </div>
                 </div>
@@ -386,12 +419,13 @@
                     <div class="screen-container">
                         <canvas id="screen256"></canvas>
                         <div class="rendering-overlay">Rendering...</div>
-                        <div class="action-overlay">
+                        <div class="action-overlay" data-palette="256" data-mode="color">
                             <div class="copy">Copy</div>
                             <div class="save">
                                 <div class="png">PNG</div>
                                 <div class="jpg">JPG</div>
                             </div>
+                            <div class="set-gif">set GIF</div>
                         </div>
                     </div>
                 </div>
@@ -400,28 +434,28 @@
                     <div class="screen-container">
                         <canvas id="screen16"></canvas>
                         <div class="rendering-overlay">Rendering...</div>
-                        <div class="action-overlay">
+                        <div class="action-overlay" data-palette="16" data-mode="color">
                             <div class="copy">Copy</div>
                             <div class="save">
                                 <div class="png">PNG</div>
                                 <div class="jpg">JPG</div>
                             </div>
+                            <div class="set-gif">set GIF</div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="screens-grid">
                 <div class="screen-wrapper">
                     <div class="screen-title">16-bit B/W</div>
                     <div class="screen-container">
                         <canvas id="screenFullBW"></canvas>
                         <div class="rendering-overlay">Rendering...</div>
-                        <div class="action-overlay">
+                        <div class="action-overlay" data-palette="16bit" data-mode="bw">
                             <div class="copy">Copy</div>
                             <div class="save">
                                 <div class="png">PNG</div>
                                 <div class="jpg">JPG</div>
                             </div>
+                           <div class="set-gif">set GIF</div>
                         </div>
                     </div>
                 </div>
@@ -430,12 +464,13 @@
                     <div class="screen-container">
                         <canvas id="screen256BW"></canvas>
                         <div class="rendering-overlay">Rendering...</div>
-                        <div class="action-overlay">
+                        <div class="action-overlay" data-palette="256" data-mode="bw">
                             <div class="copy">Copy</div>
                             <div class="save">
                                 <div class="png">PNG</div>
                                 <div class="jpg">JPG</div>
                             </div>
+                            <div class="set-gif">set GIF</div>
                         </div>
                     </div>
                 </div>
@@ -444,23 +479,28 @@
                     <div class="screen-container">
                         <canvas id="screen16BW"></canvas>
                         <div class="rendering-overlay">Rendering...</div>
-                        <div class="action-overlay">
+                        <div class="action-overlay" data-palette="16" data-mode="bw">
                             <div class="copy">Copy</div>
                             <div class="save">
                                 <div class="png">PNG</div>
                                 <div class="jpg">JPG</div>
                             </div>
+                            <div class="set-gif">set GIF</div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="gif-dialog" style="display: none;">
-        <div class="dialog-content">
-            <div class="dialog-title">GIF Builder</div>
-            <div class="dialog-body">
-                <div class="dialog-section">
+            <div class="gif-creator">
+                <div class="dialog-title" style="grid-column: 1 / -1; margin-bottom: 20px;">GIF Builder</div>
+                <div class="gif-preview screen-container">
+                    <canvas id="gifPreview" width="256" height="256"></canvas>
+                    <div class="rendering-overlay">Rendering...</div>
+                    <div class="action-overlay">
+                        <div class="save-gif">Save GIF</div>
+                    </div>
+                </div>
+                <div class="gif-controls">
+                    <div class="dialog-section">
                     <div class="section-title">Size & Animation</div>
                     <div class="control-item">
                         <label>Start Size:</label>
@@ -519,25 +559,26 @@
                             <option value="bw">Black & White</option>
                         </select>
                     </div>
+                    </div>
                 </div>
-                <div class="gif-preview">
-                    <canvas id="gifPreview" width="256" height="256"></canvas>
-                </div>
-            </div>
-            <div class="dialog-buttons">
-                <button class="button gif-preview-btn">Preview</button>
-                <button class="button gif-save">Save GIF</button>
-                <button class="button gif-cancel">Cancel</button>
             </div>
         </div>
     </div>
     <div class="save-dialog" style="display: none;">
         <div class="dialog-content">
-            <div class="dialog-title">Save Image</div>
+            <div class="dialog-title">Save</div>
             <div class="dialog-body">
                 <div class="control-item">
                     <label>Filename:</label>
-                    <input type="text" id="saveFilename" value="image">
+                    <input type="text" id="saveFilename" value="pixel-animation">
+                </div>
+                <div class="control-item" style="margin-top: 10px;">
+                    <label>Format:</label>
+                    <select id="saveFormat">
+                        <option value="gif">GIF</option>
+                        <option value="png">PNG</option>
+                        <option value="jpg">JPG</option>
+                    </select>
                 </div>
             </div>
             <div class="dialog-buttons">

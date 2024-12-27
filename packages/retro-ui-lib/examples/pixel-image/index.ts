@@ -4,8 +4,7 @@ import GIF from 'gif.js';
 // Input elements
 const imageInput = document.getElementById('imageInput') as HTMLInputElement;
 
-// GIF dialog elements
-const gifDialog = document.querySelector('.gif-dialog') as HTMLElement;
+// GIF elements
 const gifStartSizeInput = document.getElementById('gifStartSize') as HTMLInputElement;
 const gifEndSizeInput = document.getElementById('gifEndSize') as HTMLInputElement;
 const gifFrameCountInput = document.getElementById('gifFrameCount') as HTMLInputElement;
@@ -16,16 +15,14 @@ const gifTimingCurveSelect = document.getElementById('gifTimingCurve') as HTMLSe
 const gifColorPaletteSelect = document.getElementById('gifColorPalette') as HTMLSelectElement;
 const gifColorModeSelect = document.getElementById('gifColorMode') as HTMLSelectElement;
 const gifPreviewCanvas = document.getElementById('gifPreview') as HTMLCanvasElement;
-const gifPreviewBtn = document.querySelector('.gif-preview-btn') as HTMLButtonElement;
-const gifSaveBtn = document.querySelector('.gif-save') as HTMLButtonElement;
-const gifCancelBtn = document.querySelector('.gif-cancel') as HTMLButtonElement;
+// Add event listeners for GIF preview actions
+const gifPreviewContainer = document.querySelector('.gif-preview') as HTMLElement;
+const gifSaveBtn = gifPreviewContainer.querySelector('.save-gif') as HTMLElement;
+const saveFormatSelect = document.getElementById('saveFormat') as HTMLSelectElement;
 
 // GIF state
 let generatedFrames: ImageData[] = [];
 let previewInterval: number | null = null;
-
-// GIF builder button
-const gifBuilderBtn = document.getElementById('gifBuilder') as HTMLButtonElement;
 
 // Get the canvas elements and their overlays
 const fullImageCanvas = document.getElementById('fullImage') as HTMLCanvasElement;
@@ -36,13 +33,13 @@ const fullCanvasBW = document.getElementById('screenFullBW') as HTMLCanvasElemen
 const canvas256BW = document.getElementById('screen256BW') as HTMLCanvasElement;
 const canvas16BW = document.getElementById('screen16BW') as HTMLCanvasElement;
 
-const fullImageCtx = fullImageCanvas.getContext('2d')!;
-const fullCtx = fullCanvas.getContext('2d')!;
-const ctx256 = canvas256.getContext('2d')!;
-const ctx16 = canvas16.getContext('2d')!;
-const fullCtxBW = fullCanvasBW.getContext('2d')!;
-const ctx256BW = canvas256BW.getContext('2d')!;
-const ctx16BW = canvas16BW.getContext('2d')!;
+const fullImageCtx = fullImageCanvas.getContext('2d', { willReadFrequently: true })!;
+const fullCtx = fullCanvas.getContext('2d', { willReadFrequently: true })!;
+const ctx256 = canvas256.getContext('2d', { willReadFrequently: true })!;
+const ctx16 = canvas16.getContext('2d', { willReadFrequently: true })!;
+const fullCtxBW = fullCanvasBW.getContext('2d', { willReadFrequently: true })!;
+const ctx256BW = canvas256BW.getContext('2d', { willReadFrequently: true })!;
+const ctx16BW = canvas16BW.getContext('2d', { willReadFrequently: true })!;
 
 // Get rendering overlays
 const canvasConfigs = [
@@ -75,6 +72,8 @@ let startTop = 0;
 let processingTimeout: number | null = null;
 let isProcessing = false;
 let currentProcessingIndex = -1;
+let shouldCancelProcessing = false;
+let renderLock = false;
 
 // DOS 16-color palette (RGB values)
 const DOS_PALETTE = [
@@ -165,6 +164,21 @@ function findClosestColor(r: number, g: number, b: number, palette: number[][], 
         r = g = b = gray;
     }
 
+    // Fast path for 16-bit color palette (RGB565)
+    if (palette.length === 65536) {
+        // Convert to 5-6-5 bits
+        const r5 = Math.round((r * 31) / 255);  // 5 bits for red (0-31)
+        const g6 = Math.round((g * 63) / 255);  // 6 bits for green (0-63)
+        const b5 = Math.round((b * 31) / 255);  // 5 bits for blue (0-31)
+        
+        // Calculate palette index: R5G6B5 format
+        // R shifts up by 11 bits (6+5)
+        // G shifts up by 5 bits
+        // B stays at lowest 5 bits
+        return (r5 << 11) | (g6 << 5) | b5;
+    }
+
+    // Original algorithm for other palettes
     let minDistance = Infinity;
     let closestIndex = 0;
 
@@ -268,7 +282,7 @@ async function processCanvas(
     isGrayscale: boolean,
     overlay: HTMLElement
 ): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         showRenderingOverlay(overlay);
 
         // Process in chunks to avoid blocking
@@ -276,6 +290,13 @@ async function processCanvas(
         const chunkSize = 8; // Process 8 rows at a time
 
         function processChunk() {
+            // Check if processing should be cancelled
+            if (shouldCancelProcessing) {
+                hideRenderingOverlay(overlay);
+                reject(new Error('Processing cancelled'));
+                return;
+            }
+
             const endY = Math.min(y + chunkSize, gridSize);
 
             for (; y < endY; y++) {
@@ -298,7 +319,9 @@ async function processCanvas(
                 requestAnimationFrame(processChunk);
             } else {
                 // Finished processing
-                renderBuffer(buffer, ctx, palette);
+                if (!shouldCancelProcessing) {
+                    renderBuffer(buffer, ctx, palette);
+                }
                 hideRenderingOverlay(overlay);
                 resolve();
             }
@@ -317,12 +340,15 @@ function renderBuffer(buffer: VideoBuffer, ctx: CanvasRenderingContext2D, palett
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
     for (let y = 0; y < renderSize; y++) {
+        if (!cells[y]) continue; // Skip if row doesn't exist
         for (let x = 0; x < renderSize; x++) {
             const cell = cells[y][x];
-            if (cell) {
+            if (cell && cell.attributes && typeof cell.attributes.background === 'number') {
                 const color = palette[cell.attributes.background];
-                ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-                ctx.fillRect(x, y, 1, 1);
+                if (color) {
+                    ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+                    ctx.fillRect(x, y, 1, 1);
+                }
             }
         }
     }
@@ -347,7 +373,7 @@ async function processSelectedArea() {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = gridSize;
     tempCanvas.height = gridSize;
-    const tempCtx = tempCanvas.getContext('2d')!;
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
 
     // Draw selected area to temp canvas
     tempCtx.drawImage(
@@ -367,26 +393,59 @@ async function processSelectedArea() {
 
     // Process each canvas sequentially
     for (let i = 0; i < canvasConfigs.length; i++) {
+        if (shouldCancelProcessing) break;
+        
         const config = canvasConfigs[i];
         if (config.buffer) {
             const palette = i % 3 === 0 ? PALETTE_16BIT :
                           i % 3 === 1 ? PALETTE_256 :
                           DOS_PALETTE;
             const isGrayscale = i >= 3; // Last three canvases are B/W
-            await processCanvas(
-                imageData,
-                config.buffer,
-                config.canvas.getContext('2d')!,
-                palette,
-                isGrayscale,
-                config.overlay
-            );
-            // Small delay between canvases
-            if (i < canvasConfigs.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+            try {
+                await processCanvas(
+                    imageData,
+                    config.buffer,
+                    config.canvas.getContext('2d')!,
+                    palette,
+                    isGrayscale,
+                    config.overlay
+                );
+                // Small delay between canvases
+                if (i < canvasConfigs.length - 1 && !shouldCancelProcessing) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            } catch (error) {
+                if ((error as Error).message === 'Processing cancelled') {
+                    break;
+                }
+                throw error;
             }
         }
     }
+}
+
+// Function to set default GIF settings
+function setDefaultGifSettings() {
+    gifColorPaletteSelect.value = '256';  // 256 colors
+    gifColorModeSelect.value = 'bw';      // Black & White
+    gifTimingCurveSelect.value = 'curved'; // Curved timing
+    gifStartSizeInput.value = '4';        // Starting size: 4
+    gifEndSizeInput.value = '128';        // Ending size: 128
+    gifFrameCountInput.value = '20';      // Frame count: 20
+    gifAnimationTypeSelect.value = 'loop'; // Animation: Loop
+    gifLoopPauseInput.value = '2000';     // Long pause: 2000ms
+}
+
+// Function to auto-preview GIF
+async function autoPreviewGif() {
+    const startSize = parseInt(gifStartSizeInput.value);
+    const endSize = parseInt(gifEndSizeInput.value);
+    const frameCount = parseInt(gifFrameCountInput.value);
+    const delay = parseInt(gifDelayInput.value);
+    const type = gifAnimationTypeSelect.value;
+
+    generatedFrames = await generateGifFrames(startSize, endSize, frameCount);
+    showPreview(generatedFrames, delay, type);
 }
 
 // Function to process image data
@@ -405,6 +464,10 @@ function processImage(img: HTMLImageElement) {
     
     // Schedule sample processing
     scheduleSampleProcessing();
+
+    // Set default GIF settings and auto-preview
+    setDefaultGifSettings();
+    setTimeout(autoPreviewGif, 1500); // Delay to allow sample processing to complete
 }
 
 // Function to handle image import
@@ -430,13 +493,29 @@ function scheduleSampleProcessing() {
         processingTimeout = null;
     }
 
+    // Set cancel flag to stop any in-progress processing
+    shouldCancelProcessing = true;
+
     // Schedule new processing after delay
     processingTimeout = window.setTimeout(async () => {
-        if (isProcessing) return;
+        if (renderLock) return;
+        
+        // Reset cancel flag and set processing lock
+        shouldCancelProcessing = false;
+        renderLock = true;
         isProcessing = true;
-        await processSelectedArea();
-        isProcessing = false;
-        processingTimeout = null;
+
+        try {
+            await processSelectedArea();
+        } catch (error) {
+            if ((error as Error).message !== 'Processing cancelled') {
+                console.error('Processing error:', error);
+            }
+        } finally {
+            isProcessing = false;
+            renderLock = false;
+            processingTimeout = null;
+        }
     }, 1000);
 }
 
@@ -491,7 +570,7 @@ async function generateGifFrames(
     const outputCanvas = document.createElement('canvas');
     outputCanvas.width = 256;
     outputCanvas.height = 256;
-    const outputCtx = outputCanvas.getContext('2d')!;
+    const outputCtx = outputCanvas.getContext('2d', { willReadFrequently: true })!;
     outputCtx.imageSmoothingEnabled = false; // Keep pixelated look
 
     // Get the selected area from the original image
@@ -513,7 +592,7 @@ async function generateGifFrames(
         const gridCanvas = document.createElement('canvas');
         gridCanvas.width = currentSize;
         gridCanvas.height = currentSize;
-        const gridCtx = gridCanvas.getContext('2d')!;
+        const gridCtx = gridCanvas.getContext('2d', { willReadFrequently: true })!;
 
         // Draw the selected area at the current grid size
         gridCtx.drawImage(
@@ -552,7 +631,7 @@ async function generateGifFrames(
         const processedCanvas = document.createElement('canvas');
         processedCanvas.width = currentSize;
         processedCanvas.height = currentSize;
-        const processedCtx = processedCanvas.getContext('2d')!;
+        const processedCtx = processedCanvas.getContext('2d', { willReadFrequently: true })!;
 
         // Render the processed image at current size
         renderBuffer(buffer, processedCtx, selectedPalette, currentSize);
@@ -569,7 +648,7 @@ async function generateGifFrames(
 
 // Function to show preview animation
 function showPreview(frames: ImageData[], baseDelay: number, type: string) {
-    const ctx = gifPreviewCanvas.getContext('2d')!;
+    const ctx = gifPreviewCanvas.getContext('2d', { willReadFrequently: true })!;
     let forward = true;
     let frameIndex = 0;
     let pauseCount = 0;
@@ -628,7 +707,7 @@ function showPreview(frames: ImageData[], baseDelay: number, type: string) {
 }
 
 // Function to create and save GIF
-function createGif(frames: ImageData[], baseDelay: number, type: string) {
+function createGif(frames: ImageData[], baseDelay: number, type: string, filename: string) {
     const gif = new GIF({
         workers: 2,
         quality: 10,
@@ -641,7 +720,7 @@ function createGif(frames: ImageData[], baseDelay: number, type: string) {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 
     const loopPause = parseInt(gifLoopPauseInput.value);
     const startSize = parseInt(gifStartSizeInput.value);
@@ -694,7 +773,7 @@ function createGif(frames: ImageData[], baseDelay: number, type: string) {
     gif.on('finished', (blob: Blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = 'pixel-animation.gif';
+        link.download = `${filename}.gif`;
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
@@ -711,14 +790,42 @@ imageInput.addEventListener('change', (e: Event) => {
     }
 });
 
+// Debug mode check
+const isDebugMode = new URLSearchParams(window.location.search).get('debug') === 'true';
+
 document.addEventListener('paste', (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
+    if (!items) {
+        isDebugMode && console.log('No clipboard data items found');
+        return;
+    }
+
+    if (isDebugMode) {
+        console.log('Clipboard items:', Array.from(items).map(item => ({
+            kind: item.kind,
+            type: item.type
+        })));
+        console.log('Raw clipboard data:', e.clipboardData);
+    }
 
     for (const item of items) {
+        if (isDebugMode) {
+            console.log('Processing item:', {
+                kind: item.kind,
+                type: item.type
+            });
+        }
+
         if (item.type.indexOf('image') !== -1) {
             const file = item.getAsFile();
             if (file) {
+                if (isDebugMode) {
+                    console.log('Found image file:', {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size
+                    });
+                }
                 handleImageImport(file);
                 break;
             }
@@ -726,17 +833,86 @@ document.addEventListener('paste', (e: ClipboardEvent) => {
     }
 });
 
-gridSizeInput.addEventListener('change', () => {
-    gridSize = parseInt(gridSizeInput.value);
-    initializeBuffers();
+// Function to update grid size
+function updateGridSize(newSize: number) {
+    if (isNaN(newSize) || newSize <= 0) return;
     
-    // Re-process the selected area if an image is loaded
-    if (originalImage) {
-        scheduleSampleProcessing();
-    } else {
-        render();
+    // Store previous size to check against GIF sizes
+    const previousSize = gridSize;
+    
+    gridSizeInput.value = newSize.toString();
+    
+    // Update GIF sizes if they match the previous grid size
+    if (parseInt(gifStartSizeInput.value) === previousSize) {
+        gifStartSizeInput.value = newSize.toString();
+        // Trigger preview update since GIF settings changed
+        updatePreview();
     }
+    if (parseInt(gifEndSizeInput.value) === previousSize) {
+        gifEndSizeInput.value = newSize.toString();
+        // Trigger preview update since GIF settings changed
+        updatePreview();
+    }
+    
+    // Set cancel flag to stop any in-progress processing
+    shouldCancelProcessing = true;
+    
+    // Cancel any pending processing
+    if (processingTimeout !== null) {
+        window.clearTimeout(processingTimeout);
+        processingTimeout = null;
+    }
+    
+    // Wait for any current rendering to finish
+    const waitForRender = async () => {
+        if (renderLock) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+            await waitForRender();
+        }
+    };
+    
+    waitForRender().then(() => {
+        gridSize = newSize;
+        
+        // Initialize buffers first
+        initializeBuffers();
+        
+        // Ensure all buffers are properly initialized before proceeding
+        const allBuffersValid = canvasConfigs.every(config => 
+            config.buffer && config.buffer.getBufferData().cells.length === gridSize
+        );
+        
+        if (!allBuffersValid) {
+            console.error('Buffer initialization failed');
+            return;
+        }
+        
+        // Reset cancel flag before starting new processing
+        shouldCancelProcessing = false;
+        
+        // Re-process the selected area if an image is loaded
+        if (originalImage) {
+            scheduleSampleProcessing();
+        } else {
+            // Ensure render is called in next frame to allow buffer initialization to complete
+            requestAnimationFrame(() => render());
+        }
+    });
+}
+
+// Grid size input event listener
+gridSizeInput.addEventListener('change', () => {
+    updateGridSize(parseInt(gridSizeInput.value));
 });
+
+// Grid size quick buttons event listeners
+document.querySelectorAll('.grid-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const size = parseInt((btn as HTMLElement).dataset.size || '0');
+        updateGridSize(size);
+    });
+});
+
 
 selectionBox.addEventListener('mousedown', (e) => {
     if (!originalImage) return;
@@ -805,46 +981,88 @@ document.addEventListener('mouseup', () => {
         isResizing = false;
         currentHandle = null;
         scheduleSampleProcessing();
+        // Update GIF preview to reflect the new selection area
+        setTimeout(updatePreview, 250); // Wait for sample processing to complete
     }
 });
 
-// GIF builder event handlers
-gifBuilderBtn.addEventListener('click', () => {
-    if (!originalImage) {
-        alert('Please import an image first');
-        return;
-    }
-    gifDialog.style.display = 'flex';
-});
-
-gifPreviewBtn.addEventListener('click', async () => {
-    const startSize = parseInt(gifStartSizeInput.value);
-    const endSize = parseInt(gifEndSizeInput.value);
-    const frameCount = parseInt(gifFrameCountInput.value);
-    const delay = parseInt(gifDelayInput.value);
-    const type = gifAnimationTypeSelect.value;
-
-    generatedFrames = await generateGifFrames(startSize, endSize, frameCount);
-    showPreview(generatedFrames, delay, type);
-});
-
+// Show save dialog for GIF
 gifSaveBtn.addEventListener('click', () => {
-    if (generatedFrames.length === 0) {
-        alert('Please preview the animation first');
-        return;
-    }
-
-    const delay = parseInt(gifDelayInput.value);
-    const type = gifAnimationTypeSelect.value;
-    createGif(generatedFrames, delay, type);
+    const saveDialog = document.querySelector('.save-dialog') as HTMLElement;
+    const saveFormatSelect = document.getElementById('saveFormat') as HTMLSelectElement;
+    const saveFilenameInput = document.getElementById('saveFilename') as HTMLInputElement;
+    
+    saveFormatSelect.value = 'gif';
+    saveFormatSelect.disabled = true;
+    saveFilenameInput.value = 'pixel-animation';
+    saveDialog.style.display = 'flex';
 });
 
-gifCancelBtn.addEventListener('click', () => {
-    if (previewInterval !== null) {
-        window.clearInterval(previewInterval);
-        previewInterval = null;
+// Save dialog event handlers
+document.querySelector('.save-ok')?.addEventListener('click', async () => {
+    const saveDialog = document.querySelector('.save-dialog') as HTMLElement;
+    const filename = (document.getElementById('saveFilename') as HTMLInputElement).value;
+    
+    if (generatedFrames.length === 0) {
+        // Generate frames if not already generated
+        const startSize = parseInt(gifStartSizeInput.value);
+        const endSize = parseInt(gifEndSizeInput.value);
+        const frameCount = parseInt(gifFrameCountInput.value);
+        const delay = parseInt(gifDelayInput.value);
+        const type = gifAnimationTypeSelect.value;
+
+        generatedFrames = await generateGifFrames(startSize, endSize, frameCount);
+        createGif(generatedFrames, delay, type, filename);
+    } else {
+        const delay = parseInt(gifDelayInput.value);
+        const type = gifAnimationTypeSelect.value;
+        createGif(generatedFrames, delay, type, filename);
     }
-    gifDialog.style.display = 'none';
+    
+    saveDialog.style.display = 'none';
+    saveFormatSelect.disabled = false;
+});
+
+document.querySelector('.save-cancel')?.addEventListener('click', () => {
+    const saveDialog = document.querySelector('.save-dialog') as HTMLElement;
+    const saveFormatSelect = document.getElementById('saveFormat') as HTMLSelectElement;
+    saveDialog.style.display = 'none';
+    saveFormatSelect.disabled = false;
+});
+
+// Auto-generate preview when settings change
+const updatePreview = () => {
+    if (originalImage) {
+        autoPreviewGif();
+    }
+};
+
+// Add input event listeners for immediate updates
+[gifStartSizeInput, gifEndSizeInput, gifFrameCountInput].forEach(input => {
+    input.addEventListener('input', updatePreview);
+});
+
+// Add change event listeners for select elements and other inputs
+[gifAnimationTypeSelect, gifDelayInput, gifLoopPauseInput,
+ gifTimingCurveSelect, gifColorPaletteSelect, gifColorModeSelect].forEach(input => {
+    input.addEventListener('change', updatePreview);
+});
+
+// Add event listeners for Set GIF buttons
+document.querySelectorAll('.action-overlay').forEach(overlay => {
+    const setGifBtn = overlay.querySelector('.set-gif');
+    if (setGifBtn) {
+        setGifBtn.addEventListener('click', () => {
+            const palette = (overlay as HTMLElement).dataset.palette;
+            const mode = (overlay as HTMLElement).dataset.mode;
+            
+            if (palette && mode) {
+                gifColorPaletteSelect.value = palette;
+                gifColorModeSelect.value = mode;
+                updatePreview();
+            }
+        });
+    }
 });
 
 // Initial setup
