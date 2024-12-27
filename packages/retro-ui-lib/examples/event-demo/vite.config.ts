@@ -6,7 +6,13 @@ export default defineConfig({
     open: true
   },
   build: {
-    target: 'esnext'
+    target: 'esnext',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      }
+    }
   },
   resolve: {
     alias: {
@@ -15,5 +21,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['@retro-dos/retro-ui-lib']
-  }
+  },
+  base: './'
 });

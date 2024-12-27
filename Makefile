@@ -17,12 +17,19 @@ clean:
 
 # Build all demos for GitHub Pages
 build-demos:
-	# Create docs directories if they don't exist
+	# Clean up any existing docs
+	rm -rf docs/* packages/*/docs
+	# Create root docs directories
 	mkdir -p docs/event-demo docs/foxpro-basic docs/input-demo docs/pixel-image docs/raw-buffer-demo
-	# Build UI library demos
-	cd packages/retro-ui-lib && npm run build:demos
-	# Build FoxPro demo
-	cd packages/retro-foxpro-ui && npm run build:demo
+	# Build UI library demos and ensure they're in the root docs directory
+	VITE_BUILD_OUTDIR="$(PWD)/docs" cd packages/retro-ui-lib && \
+		npx vite build examples/pixel-image --outDir "$(PWD)/docs/pixel-image" --base ./ --config examples/pixel-image/vite.config.ts && \
+		npx vite build examples/event-demo --outDir "$(PWD)/docs/event-demo" --base ./ --config examples/event-demo/vite.config.ts && \
+		npx vite build examples/input-demo --outDir "$(PWD)/docs/input-demo" --base ./ --config examples/input-demo/vite.config.ts && \
+		npx vite build examples/raw-buffer-demo --outDir "$(PWD)/docs/raw-buffer-demo" --base ./ --config examples/raw-buffer-demo/vite.config.ts
+	# Build FoxPro demo and ensure it's in the root docs directory
+	VITE_BUILD_OUTDIR="$(PWD)/docs" cd packages/retro-foxpro-ui && \
+		npx vite build examples/basic-demo --outDir "$(PWD)/docs/foxpro-basic" --base ./ --config examples/basic-demo/vite.config.ts
 
 # Serve demos locally
 serve-demos: build-demos

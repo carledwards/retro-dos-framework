@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
   server: {
@@ -6,14 +7,18 @@ export default defineConfig({
     open: true
   },
   build: {
-    target: 'esnext'
+    target: 'esnext',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html')
+      }
+    }
   },
   resolve: {
-    alias: [
-      {
-        find: '@retro-dos/foxpro-ui',
-        replacement: '/Users/carledwards/dev/carledwards/retro-dos-framework/packages/retro-foxpro-ui/src'
-      }
-    ]
-  }
+    alias: {
+      '@retro-dos/foxpro-ui': resolve(__dirname, '../../src')
+    }
+  },
+  base: './'
 });
