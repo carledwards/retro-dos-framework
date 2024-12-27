@@ -1,12 +1,19 @@
 import { VideoBuffer, KeyboardService, MouseService } from '@retro-dos/retro-ui-lib';
 import { UIManager, DefaultTheme } from '../../src/index';
 
-// Initialize canvas
+// Initialize canvas with proper dimensions
 const canvas = document.getElementById('screen') as HTMLCanvasElement;
-canvas.width = 1600;
+const CHAR_WIDTH = 16; // Base character width in pixels
+const CHAR_HEIGHT = Math.floor(CHAR_WIDTH * 1.6); // Standard DOS character aspect ratio
+const COLS = 80;
+const ROWS = 25;
+
+// Set canvas dimensions based on character size
+canvas.width = COLS * CHAR_WIDTH;
+canvas.height = ROWS * CHAR_HEIGHT;
 
 // Initialize core services
-const videoBuffer = new VideoBuffer(80, 25);
+const videoBuffer = new VideoBuffer(COLS, ROWS);
 const keyboard = new KeyboardService();
 const mouse = new MouseService(canvas);
 

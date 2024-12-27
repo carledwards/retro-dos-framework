@@ -17,9 +17,9 @@ clean:
 
 # Build all demos for GitHub Pages
 build-demos:
-	# Clean up any existing docs
-	rm -rf docs/* packages/*/docs
-	# Create root docs directories
+	# Clean up docs while preserving root index.html
+	@find docs -mindepth 1 ! -name "index.html" -exec rm -rf {} +
+	@rm -rf packages/*/docs	# Create root docs directories
 	mkdir -p docs/event-demo docs/foxpro-basic docs/input-demo docs/pixel-image docs/raw-buffer-demo
 	# Build UI library demos and ensure they're in the root docs directory
 	VITE_BUILD_OUTDIR="$(PWD)/docs" cd packages/retro-ui-lib && \
