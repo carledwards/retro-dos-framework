@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Coordination Demo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #1a1a1a;
+      color: #fff;
+      font-family: monospace;
+    }
+    #buffer {
+      margin: 20px 0;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #333;
+      border-radius: 4px;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 10px;
+      background-color: #333;
+      border-radius: 4px;
+    }
+    .event-log {
+      height: 150px;
+      overflow-y: auto;
+      background-color: #222;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .event-log .event {
+      margin: 2px 0;
+      padding: 2px 5px;
+      border-radius: 2px;
+    }
+    .event-log .input-event {
+      background-color: #2c4f2c;
+    }
+    .event-log .ui-event {
+      background-color: #4f2c2c;
+    }
+  </style>
+  <script type="module" crossorigin src="./assets/index-74ad6f93.js"></script>
+</head>
+<body>
+  <h1>Event Coordination Demo</h1>
+  <div class="section">
+    <h2>Video Buffer</h2>
+    <div id="buffer"></div>
+  </div>
+  <div class="section">
+    <h2>Status</h2>
+    <div id="status">Initializing...</div>
+  </div>
+  <div class="section">
+    <h2>Event Log</h2>
+    <div id="event-log" class="event-log"></div>
+  </div>
+  
+</body>
+</html>

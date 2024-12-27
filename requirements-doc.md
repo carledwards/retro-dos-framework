@@ -46,16 +46,36 @@ interface IVideoBuffer {
 - Canvas/rendering logic - moved to renderer
 - Viewport management - moved to UI layer
 
-### 2. UI Framework (FoxPro-like Interface)
+### 2. Input Services
+- Keyboard input handling
+  - Key event management
+  - Key state tracking
+  - Key mapping support
+- Mouse input handling
+  - Mouse movement tracking
+  - Button state management
+  - Cursor management
+- Event system integration
+- Cross-browser compatibility
+
+### 3. Renderer System
+- Canvas rendering implementation
+- Font management
+- Color palette handling
+- Cursor rendering
+- Performance optimizations
+- Scaling and resolution management
+
+### 4. UI Framework (FoxPro-like Interface)
 - Window management system
 - Menu systems and dialog boxes
 - Form controls (text fields, buttons, etc.)
-- Event handling for mouse/keyboard
 - Support for overlaid modern graphics within windows
 - Theming capabilities
+- React-based component system
 - Must use video buffer as its rendering target
 
-### 3. Application Layer
+### 5. Application Layer
 - Support for building games and applications
 - Example implementations
 - Clear separation from underlying frameworks
@@ -70,17 +90,35 @@ interface IVideoBuffer {
 
 ### Development Environment
 - TypeScript-based implementation
-- Monorepo tooling (Turborepo/Nx)
+- Monorepo tooling (Turborepo)
 - Proper package management for future separation
 
 ### Package Structure
 ```
-dos-framework-mono/
+retro-dos-framework/
 ├── packages/
-│   ├── retro-video-buffer/
-│   ├── retro-ui-framework/
-│   └── example-applications/
+│   ├── retro-video-buffer/     # Core buffer implementation
+│   │   └── examples/           # Example applications
+│   │       └── raw-buffer-demo/# Raw buffer validation demo
+│   ├── retro-input-services/   # Keyboard and mouse input handling
+│   │   └── examples/           # Example applications
+│   │       └── input-demo/     # Input services demo
+│   ├── retro-renderer/         # Canvas rendering system
+│   └── retro-ui/              # React-based UI components
 ```
+
+### Example Applications
+- Raw Buffer Demo
+  - Validates core buffer functionality
+  - Tests performance with animation
+  - Demonstrates cursor management
+  - Shows color attribute handling
+  - Provides interactive controls
+  - Monitors performance metrics
+- Input Demo
+  - Demonstrates keyboard and mouse input handling
+  - Shows input event system
+  - Tests cross-browser compatibility
 
 ## Feature Requirements
 
@@ -91,6 +129,20 @@ dos-framework-mono/
 - Buffer manipulation primitives
 - Remote viewing capability
 
+### Input Services
+- Keyboard event handling
+- Mouse movement and button tracking
+- Input state management
+- Cross-browser compatibility
+- Event system integration
+
+### Renderer
+- Support for custom fonts (particularly DOS-style fonts)
+- Proper character aspect ratio maintenance
+- Color palette management (DOS 16-color support minimum)
+- Cursor rendering and blinking
+- Support for different scaling modes
+
 ### UI Framework
 - Window creation and management
 - Dialog system
@@ -98,7 +150,7 @@ dos-framework-mono/
 - Form controls
 - Modern graphics overlay support
 - Event system
-- Mouse/keyboard input handling
+- React component integration
 
 ### Performance Requirements
 - Efficient dirty region tracking and updates
@@ -106,13 +158,6 @@ dos-framework-mono/
 - Smart cursor blinking management
 - Optimal canvas rendering strategies
 - Memory-efficient buffer management
-
-### Rendering Requirements
-- Support for custom fonts (particularly DOS-style fonts)
-- Proper character aspect ratio maintenance
-- Color palette management (DOS 16-color support minimum)
-- Cursor rendering and blinking
-- Support for different scaling modes
 
 ### Cross-cutting Concerns
 - Performance optimization

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro DOS Framework Demos</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #c0c0c0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: monospace;
+            color: #000;
+        }
+        .container {
+            background: #c0c0c0;
+            padding: 20px;
+            border-radius: 4px;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 20px;
+            text-align: center;
+            text-shadow: 1px 1px #fff;
+        }
+        .demo-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .demo-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #d4d4d4;
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+        }
+        .section-title {
+            margin: 0 0 10px 0;
+            font-weight: bold;
+            text-shadow: 1px 1px #fff;
+        }
+        .demo-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+        }
+        .demo-item:last-child {
+            margin-bottom: 0;
+        }
+        .demo-link {
+            color: #000;
+            text-decoration: none;
+            display: block;
+        }
+        .demo-link:hover {
+            text-decoration: underline;
+        }
+        .demo-description {
+            font-size: 12px;
+            color: #444;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Retro DOS Framework Demos</h1>
+        
+        <div class="demo-section">
+            <div class="section-title">FoxPro UI Demos</div>
+            <ul class="demo-list">
+                <li class="demo-item">
+                    <a href="foxpro-basic/" class="demo-link">Basic FoxPro Demo</a>
+                    <div class="demo-description">Demonstrates basic FoxPro-style UI components and interactions</div>
+                </li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <div class="section-title">UI Library Demos</div>
+            <ul class="demo-list">
+                <li class="demo-item">
+                    <a href="pixel-image/" class="demo-link">Pixel Image Demo</a>
+                    <div class="demo-description">Convert and manipulate images with different color palettes</div>
+                </li>
+                <li class="demo-item">
+                    <a href="event-demo/" class="demo-link">Event Demo</a>
+                    <div class="demo-description">Demonstrates event handling system</div>
+                </li>
+                <li class="demo-item">
+                    <a href="input-demo/" class="demo-link">Input Demo</a>
+                    <div class="demo-description">Keyboard and mouse input handling</div>
+                </li>
+                <li class="demo-item">
+                    <a href="raw-buffer-demo/" class="demo-link">Raw Buffer Demo</a>
+                    <div class="demo-description">Low-level buffer manipulation</div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
