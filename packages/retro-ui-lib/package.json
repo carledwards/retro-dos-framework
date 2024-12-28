@@ -14,11 +14,13 @@
     "demo:input": "vite examples/input-demo",
     "demo:event": "vite examples/event-demo",
     "demo:pixel-image": "vite examples/pixel-image",
-    "build:demos": "npm run build:demo:pixel-image && npm run build:demo:event && npm run build:demo:input && npm run build:demo:raw-buffer",
+    "demo:gologo": "vite examples/gologo",
+    "build:demos": "npm run build:demo:pixel-image && npm run build:demo:event && npm run build:demo:input && npm run build:demo:raw-buffer && npm run build:demo:gologo",
     "build:demo:pixel-image": "vite build examples/pixel-image --outDir ../../docs/pixel-image --base ./ --config examples/pixel-image/vite.config.ts",
     "build:demo:event": "vite build examples/event-demo --outDir ../../docs/event-demo --base ./ --config examples/event-demo/vite.config.ts",
     "build:demo:input": "vite build examples/input-demo --outDir ../../docs/input-demo --base ./ --config examples/input-demo/vite.config.ts",
-    "build:demo:raw-buffer": "vite build examples/raw-buffer-demo --outDir ../../docs/raw-buffer-demo --base ./ --config examples/raw-buffer-demo/vite.config.ts"
+    "build:demo:raw-buffer": "vite build examples/raw-buffer-demo --outDir ../../docs/raw-buffer-demo --base ./ --config examples/raw-buffer-demo/vite.config.ts",
+    "build:demo:gologo": "vite build examples/gologo --outDir ../../docs/gologo --base ./ --config examples/gologo/vite.config.ts"
   },
   "devDependencies": {
     "tsup": "^6.0.1",

@@ -20,13 +20,14 @@ build-demos:
 	# Clean up docs while preserving root index.html
 	@find docs -mindepth 1 ! -name "index.html" -exec rm -rf {} +
 	@rm -rf packages/*/docs	# Create root docs directories
-	mkdir -p docs/event-demo docs/foxpro-basic docs/input-demo docs/pixel-image docs/raw-buffer-demo
+	mkdir -p docs/event-demo docs/foxpro-basic docs/input-demo docs/pixel-image docs/raw-buffer-demo docs/gologo
 	# Build UI library demos and ensure they're in the root docs directory
 	VITE_BUILD_OUTDIR="$(PWD)/docs" cd packages/retro-ui-lib && \
 		npx vite build examples/pixel-image --outDir "$(PWD)/docs/pixel-image" --base ./ --config examples/pixel-image/vite.config.ts && \
 		npx vite build examples/event-demo --outDir "$(PWD)/docs/event-demo" --base ./ --config examples/event-demo/vite.config.ts && \
 		npx vite build examples/input-demo --outDir "$(PWD)/docs/input-demo" --base ./ --config examples/input-demo/vite.config.ts && \
-		npx vite build examples/raw-buffer-demo --outDir "$(PWD)/docs/raw-buffer-demo" --base ./ --config examples/raw-buffer-demo/vite.config.ts
+		npx vite build examples/raw-buffer-demo --outDir "$(PWD)/docs/raw-buffer-demo" --base ./ --config examples/raw-buffer-demo/vite.config.ts && \
+		npx vite build examples/gologo --outDir "$(PWD)/docs/gologo" --base ./ --config examples/gologo/vite.config.ts
 	# Build FoxPro demo and ensure it's in the root docs directory
 	VITE_BUILD_OUTDIR="$(PWD)/docs" cd packages/retro-foxpro-ui && \
 		npx vite build examples/basic-demo --outDir "$(PWD)/docs/foxpro-basic" --base ./ --config examples/basic-demo/vite.config.ts
@@ -59,6 +60,9 @@ demo-raw-buffer:
 
 demo-pixel:
 	cd packages/retro-ui-lib && npm run demo:pixel-image
+
+demo-gologo:
+	cd packages/retro-ui-lib && npm run demo:gologo
 
 # Format code
 format:
